@@ -223,9 +223,18 @@ namespace UnityEngine.InputSystem
 
             MatchResult? bestResult = null;
             InputControlScheme? bestScheme = null;
+            string[] bestSchemeControlLayouts = null;
 
             foreach (var scheme in schemes)
             {
+                // If a match has already been found and the next candidate doesn't have equivalent device requirements to the match then skip it.
+                if (bestScheme != null)
+                {
+                    var schemeControlLayouts = scheme.deviceRequirements.Select(x => InputControlPath.TryGetDeviceLayout(x.controlPath)).ToArray();
+                    if (bestSchemeControlLayouts.Any(x => !schemeControlLayouts.Any(y => InputSystem.IsFirstLayoutBasedOnSecond(x, y) || InputSystem.IsFirstLayoutBasedOnSecond(y, x))))
+                        continue;
+                }
+
                 var result = scheme.PickDevicesFrom(devices, favorDevice: mustIncludeDevice);
 
                 // Ignore if scheme doesn't fit devices.
@@ -254,6 +263,7 @@ namespace UnityEngine.InputSystem
 
                 bestResult = result;
                 bestScheme = scheme;
+                bestSchemeControlLayouts = scheme.deviceRequirements.Select(x => InputControlPath.TryGetDeviceLayout(x.controlPath)).ToArray();
             }
 
             matchResult = bestResult ?? default;
